@@ -21,8 +21,10 @@
         }
 
         .button_ {
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
             position: absolute;
-
             font-family: "Google Sans", Roboto, Arial, sans-serif;
             font-size: 14px;
             fill: currentcolor;
@@ -78,6 +80,7 @@
     let width;
     let height;
     let zoom;
+    let scaler;
     let offsetX;
     let offsetY;
     let drag = false;
@@ -94,6 +97,7 @@
         offsetX = 0;
         offsetY = 0;
         zoom = 1 / 200;
+        scaler = 1;
         tutorialDisappear = 60;
         tutorial.style.display = '';
         if (changeToHighResTask) {
@@ -163,16 +167,16 @@
         draw.fillRect(0, 0, width, height);
         for (let y = 0; y < height; y += res / 2) {
             for (let x = 0; x < width; x += res / 2) {
-                let coordX = ((x - width / 2) + offsetX) * zoom + offsetX;
-                let coordY = ((y - height / 2) + offsetY) * zoom + offsetY;
+                let coordX = (((x - width / 2) + offsetX) * zoom + offsetX) / scaler;
+                let coordY = (((y - height / 2) + offsetY) * zoom + offsetY) / scaler;
                 let a = coordX;
                 let b = coordY;
-                for (let t = 0; t < 200; t++) {
+                for (let t = 0; t < 255; t++) {
                     let d = (a * a) - (b * b) + coordX;
                     b = 2 * (a * b) + coordY;
                     a = d;
-                    if (d > 100) {
-                        atom(x, y, `rgb(${2.5 * t}, ${t}, ${t})`);
+                    if (d > 100 / scaler / scaler) {
+                        atom(x, y, `rgb(${t}, ${t / 2}, ${t / 2})`);
                         break;
                     }
                 }
@@ -192,8 +196,8 @@
 
     canvas.addEventListener('dblclick', event => {
         changeToLowRes(1_500);
-        let moveX = ((width / 2) - event.clientX) * zoom;
-        let moveY = ((height / 2) - event.clientY) * zoom;
+        let moveX = (((width / 2) - event.clientX) * zoom) * scaler;
+        let moveY = (((height / 2) - event.clientY) * zoom) * scaler;
         offsetX -= moveX;
         offsetY -= moveY;
         fillCanvas();
