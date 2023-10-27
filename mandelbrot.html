@@ -1,0 +1,228 @@
+<header>
+    <style>
+        .upper_left {
+            top: 50px;
+            left: 50px;
+        }
+
+        .bottom_left {
+            bottom: 50px;
+            left: 50px;
+        }
+
+        .single_line_button {
+            border-radius: 24px;
+            height: 48px;
+        }
+
+        .five_line_button {
+            border-radius: 96px;
+            height: 120px;
+        }
+
+        .button_ {
+            position: absolute;
+
+            font-family: "Google Sans", Roboto, Arial, sans-serif;
+            font-size: 14px;
+            fill: currentcolor;
+            text-align: center;
+        }
+
+        .button_:hover {
+            background: #F6F9FE;
+            color: #174ea6;
+        }
+
+        .button_:active {
+            box-shadow: 0 4px 4px 0 rgb(60 64 67 / 30%), 0 8px 12px 6px rgb(60 64 67 / 15%);
+            outline: none;
+        }
+
+        .button_:focus {
+            outline: none;
+            border: 2px solid #4285f4;
+        }
+
+        .button_:not(:disabled) {
+            box-shadow: rgba(60, 64, 67, .3) 0 1px 3px 0, rgba(60, 64, 67, .15) 0 4px 8px 3px;
+        }
+
+        .button_:not(:disabled):hover {
+            box-shadow: rgba(60, 64, 67, .3) 0 2px 3px 0, rgba(60, 64, 67, .15) 0 6px 10px 4px;
+        }
+    </style>
+    <title>Mandelbrot set visualizer</title>
+</header>
+
+<body style="background-color: black;">
+    <canvas style="cursor: default;" id="mandelbrot"></canvas>
+    <button class="button_ upper_left single_line_button" id="button">
+        Change to low resolution
+    </button>
+    <button class="button_ bottom_left five_line_button" id="tutorial">
+        Scroll with your mouse to zoom in and out. <br>Double click anywhere to center it.<br> Use the upper left button
+        to change resolution (auto-changes on movement). <br> Press [spacebar] to reset to default view. <br> Press this
+        button and it will disappear.
+    </button>
+</body>
+
+<script>
+    const canvas = document.getElementById("mandelbrot");
+    const button = document.getElementById("button");
+    const tutorial = document.getElementById("tutorial");
+    const draw = canvas.getContext("2d");
+    const highRes = 2;
+    const lowRes = 10;
+    const tutorialText = tutorial.innerHTML;
+    let width;
+    let height;
+    let zoom;
+    let offsetX;
+    let offsetY;
+    let drag = false;
+    let dragStart;
+    let dragEnd;
+
+    let res = highRes;
+    let changeToHighResTask;
+
+    let tutorialCountDownTask;
+    let tutorialDisappear;
+
+    function init() {
+        offsetX = 0;
+        offsetY = 0;
+        zoom = 1 / 200;
+        tutorialDisappear = 60;
+        tutorial.style.display = '';
+        if (changeToHighResTask) {
+            clearTimeout(changeToHighResTask);
+        }
+        if (tutorialCountDownTask) {
+            clearTimeout(tutorialCountDownTask);
+        }
+        changeToHighRes();
+        tutorialCountDown();
+    }
+
+    function tutorialCountDown() {
+        if (tutorialDisappear > 0) {
+            tutorialDisappear--;
+            tutorial.innerHTML = `${tutorialText} (${tutorialDisappear})`;
+            tutorialCountDownTask = setTimeout(() => tutorialCountDown(), 1_000);
+        } else {
+            tutorial.style.display = 'none';
+        }
+    }
+
+    function scale(event) {
+        changeToLowRes(1_500);
+        event.preventDefault();
+        if (event.deltaY > 0) { // UP
+            zoom *= 1.1;
+        } else {
+            zoom *= 1 / 1.1;
+        }
+        fillCanvas();
+    }
+
+    function changeToLowRes(timeout) {
+        if (changeToHighResTask) {
+            clearTimeout(changeToHighResTask);
+        }
+        if (timeout > 0) {
+            changeToHighResTask = setTimeout(() => changeToHighRes(), timeout);
+        }
+
+        if (res === lowRes) {
+            return;
+        }
+
+        button.innerText = "Change to high resolution";
+        res = lowRes;
+
+    }
+
+    function changeToHighRes() {
+        button.innerText = "Change to low resolution";
+        res = highRes;
+        fillCanvas();
+    }
+
+    function resizeCanvas() {
+        width = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0) - 20;
+        height = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0) - 20;
+
+        canvas.width = width;
+        canvas.height = height;
+    }
+
+    function fillCanvas() {
+        draw.fillStyle = 'white';
+        draw.fillRect(0, 0, width, height);
+        for (let y = 0; y < height; y += res / 2) {
+            for (let x = 0; x < width; x += res / 2) {
+                let coordX = ((x - width / 2) + offsetX) * zoom + offsetX;
+                let coordY = ((y - height / 2) + offsetY) * zoom + offsetY;
+                let a = coordX;
+                let b = coordY;
+                for (let t = 0; t < 200; t++) {
+                    let d = (a * a) - (b * b) + coordX;
+                    b = 2 * (a * b) + coordY;
+                    a = d;
+                    if (d > 100) {
+                        atom(x, y, `rgb(${2.5 * t}, ${t}, ${t})`);
+                        break;
+                    }
+                }
+
+            }
+        }
+    }
+
+    function atom(x, y, color) {
+        draw.fillStyle = color;
+        draw.fillRect(x, y, res, res);
+    }
+    resizeCanvas();
+    fillCanvas();
+
+    window.addEventListener('resize', () => { resizeCanvas(); fillCanvas(); }, false);
+
+    canvas.addEventListener('dblclick', event => {
+        changeToLowRes(1_500);
+        let moveX = ((width / 2) - event.clientX) * zoom;
+        let moveY = ((height / 2) - event.clientY) * zoom;
+        offsetX -= moveX;
+        offsetY -= moveY;
+        fillCanvas();
+    });
+
+
+    button.addEventListener('click', event => {
+        if (res === highRes) {
+            changeToLowRes(0);
+        } else {
+            changeToHighRes();
+        }
+
+        fillCanvas();
+    });
+
+    tutorial.addEventListener('click', event => {
+        console.log(tutorial.style.display);
+        tutorial.style.display = 'none';
+    });
+
+    document.addEventListener('keyup', event => {
+        if (event.code === 'Space') {
+            init();
+        }
+    });
+
+    canvas.onwheel = scale;
+    init();
+
+
+</script>
